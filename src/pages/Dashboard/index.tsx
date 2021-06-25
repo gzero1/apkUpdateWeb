@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import BackgroundImage from '../../components/BackgroundImage';
 import Card from '../../components/Card';
 import { useHistory as useNavigation } from 'react-router';
@@ -7,6 +7,12 @@ import { VscTriangleRight } from 'react-icons/vsc';
 
 const Dashboard: React.FC = () => {
   const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    if (!localStorage.getItem('authToken')) {
+      navigation.push('/');
+    }
+  }, []);
 
   return (
     <BackgroundImage>

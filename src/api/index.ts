@@ -3,15 +3,15 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: url,
-})
+});
 
-axios.interceptors.request.use(async (config) => {
-  const token = await localStorage.getItem('authToken');
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
 
   if (token) {
-    config.headers['token'] = `${token}`;
+    config.headers['Authorization'] = `Bearer ${token}`;
   }
   return config;
-})
+});
 
-export default api
+export default api;

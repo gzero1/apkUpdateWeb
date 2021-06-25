@@ -1,10 +1,13 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useState } from 'react';
 import BackgroundImage from '../../components/BackgroundImage';
 import { useHistory as useNavigation } from 'react-router-dom';
 
 import api from '../../api';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
+import ILoginResponse from '../../@types/api/login.response';
+import ILoginData from '../../@types/api/login.data';
+import { AxiosResponse } from 'axios';
 
 const SignIn: React.FC = () => {
   const navigation = useNavigation();
@@ -16,23 +19,20 @@ const SignIn: React.FC = () => {
   const handleSubmit = async () => {
     try {
       console.log('posting');
-      let response = await api.post('/authorize', { login: user, password });
+      let response = await api.post<ILoginData, AxiosResponse<ILoginResponse>>(
+        '/authorize',
+        { login: user, password }
+      );
       if (!response) {
         throw Error('Unknown Error');
       }
-      localStorage.setItem('userCredentials', `${user}\$${password}`);
+      localStorage.setItem('authToken', response.data.token);
+      console.log('setToken', response.data.token);
       navigation.push('/dashboard');
     } catch (error: any) {
       setErrorMessage(error.response?.data?.message || error.message);
     }
   };
-
-  useLayoutEffect(() => {
-    if (localStorage.getItem('userCredentials')) {
-      navigation.push('/dashboard');
-    }
-  }, []);
-
   return (
     <BackgroundImage>
       <Card style={styles.card}>

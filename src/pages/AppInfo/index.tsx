@@ -1,53 +1,100 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useHistory as useNavigation, useParams } from 'react-router-dom';
 import api from '../../api';
 import BackgroundImage from '../../components/BackgroundImage';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import ClipLoader from 'react-spinners/ClipLoader';
-
+import IAppInfoResponse from '../../@types/api/getInfo.response';
+import url from '../../api/url';
 const AppInfo: React.FC = () => {
   const { name } = useParams<{ name: string }>();
-  const [selectedVersion, setSelectedVersion] = useState<string>('2021.17.0');
+  const [selectedVersion, setSelectedVersion] = useState<string>('');
   const [selectedType, setSelectedType] = useState<'stable' | 'unstable'>(
     'stable'
   );
+  const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [basicInfo, setBasicInfo] = useState<{ [key: string]: string }>({
-    name: 'Exemplo',
-    github: 'http://example.com',
-    latestVersion: '2021.17.0',
+    name: 'Loading...',
+    github: 'Loading...',
+    latestVersion: 'Loading...',
   });
+  const navigation = useNavigation();
   const inputFile = useRef<HTMLInputElement | null>(null);
 
   useLayoutEffect(() => {
-    setLoading(true);
-    // api.get('/app_info/', { params: { name: name } });
-    setLoading(false);
+    if (!localStorage.getItem('authToken')) {
+      navigation.push('/');
+    }
   }, []);
 
-  const Upload = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    inputFile.current!.click();
-    if (!selectedFile) {
-      return;
+  useLayoutEffect(() => {
+    async function getInfo() {
+      setLoading(true);
+      try {
+        let response = await api.get<IAppInfoResponse>(`/getInfo/${name}`);
+        setBasicInfo({
+          name: response.data.appInfo.name,
+          github: response.data.appInfo.repository_link,
+          latestVersion: response.data.appInfo.latest_version,
+        });
+        console.log(response);
+      } catch (e: any) {
+        console.log(e);
+        if (e?.response?.status >= 400 && e?.response?.status < 500) {
+          navigation.push('/');
+          localStorage.clear();
+        }
+
+        navigation.push('/dashboard');
+      } finally {
+        setLoading(false);
+      }
     }
+    getInfo();
+  }, []);
 
-    var bodyFormData = new FormData();
-    bodyFormData.append('apk', selectedFile);
+  const Upload = (file: File) => {
+    try {
+      var bodyFormData = new FormData();
+      bodyFormData.append('apk', file);
 
-    api.post(
-      `/upload/${name}/${selectedVersion.replace(/\./g, '_')}/${selectedType}`,
-      bodyFormData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
+      api.post(
+        `/upload/${name}/${selectedVersion.replace(
+          /\./g,
+          '_'
+        )}/${selectedType}`,
+        bodyFormData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (event) => {
+            let progress: number = Math.round(
+              (event.loaded * 100) / event.total
+            );
+
+            setMessage(`Fazendo upload... ${progress}% completo.`);
+            if (progress == 100) setMessage('Arquivo enviado');
+          },
+        }
+      );
+    } catch (e: any) {
+      if (e?.response?.status >= 400 && e?.response?.status < 500) {
+        navigation.push('/');
+        localStorage.clear();
+      }
+    }
   };
 
   const Download = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    api.get(
-      `/upload/${name}/${selectedVersion.replace(/\./g, '_')}/${selectedType}`
-    );
+    if (selectedVersion.length > 0) {
+      window.open(
+        `${url}/download/${name}/${selectedVersion.replace(/\./g, '_')}`
+      );
+    } else {
+      window.open(`${url}/download/${name}/latest`);
+    }
   };
 
   return (
@@ -55,6 +102,7 @@ const AppInfo: React.FC = () => {
       {!loading ? (
         <Card style={styles.card}>
           <h1 style={styles.title}>{basicInfo.name}</h1>
+          <h2 style={styles.label}>{message}</h2>
           <div style={styles.basicInfoContainer}>
             <span style={styles.label}>
               Última Versão: {basicInfo.latestVersion}
@@ -84,6 +132,7 @@ const AppInfo: React.FC = () => {
             <div style={styles.typeContainer}>
               <label style={styles.label}>Type: </label>
               <button
+                id="stable"
                 style={{
                   ...styles.checkbox,
                   backgroundColor:
@@ -91,8 +140,11 @@ const AppInfo: React.FC = () => {
                 }}
                 onClick={() => setSelectedType('stable')}
               />
-              <label style={styles.label}>stable</label>
+              <label htmlFor="stable" style={styles.label}>
+                stable
+              </label>
               <button
+                id="unstable"
                 style={{
                   ...styles.checkbox,
                   backgroundColor:
@@ -100,7 +152,9 @@ const AppInfo: React.FC = () => {
                 }}
                 onClick={() => setSelectedType('unstable')}
               />
-              <label style={styles.label}>unstable</label>
+              <label htmlFor="unstable" style={styles.label}>
+                unstable
+              </label>
             </div>
           </div>
 
@@ -108,7 +162,12 @@ const AppInfo: React.FC = () => {
             <Button style={{ width: '45%' }} onClick={Download}>
               Download
             </Button>
-            <Button style={{ width: '45%' }} onClick={Upload}>
+            <Button
+              style={{ width: '45%' }}
+              onClick={() => {
+                inputFile.current!.click();
+              }}
+            >
               Upload
             </Button>
           </div>
@@ -118,7 +177,9 @@ const AppInfo: React.FC = () => {
             id="file"
             ref={inputFile}
             onChange={(e) => {
-              if (e.target.files) setSelectedFile(e.target.files[0]);
+              if (e.target.files) {
+                Upload(e.target.files[0]);
+              }
             }}
             style={{ display: 'none' }}
           />

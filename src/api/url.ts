@@ -1,3 +1,5 @@
-const url = 'http://main.barroscasa.me:3432';
+import { apiUrl } from '../../secret.json';
+
+const url = apiUrl;
 
 export default url;
