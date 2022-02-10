@@ -1,5 +1,3 @@
-import { apiUrl } from '../../secret.json';
-
-const url = apiUrl;
+const url = 'http://wssun.dyndns.ws:3432';
 
 export default url;

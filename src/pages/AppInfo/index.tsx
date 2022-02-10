@@ -8,6 +8,7 @@ import Input from '../../components/Input';
 import ClipLoader from 'react-spinners/ClipLoader';
 import IAppInfoResponse from '../../@types/api/getInfo.response';
 import url from '../../api/url';
+
 const AppInfo: React.FC = () => {
   const { name } = useParams<{ name: string }>();
   const [selectedVersion, setSelectedVersion] = useState<string>('');
@@ -16,8 +17,8 @@ const AppInfo: React.FC = () => {
   );
   const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [basicInfo, setBasicInfo] = useState<{ [key: string]: string }>({
-    name: 'Loading...',
+  const [basicInfo, setBasicInfo] = useState({
+    display_name: 'Loading...',
     github: 'Loading...',
     latestVersion: 'Loading...',
   });
@@ -28,19 +29,15 @@ const AppInfo: React.FC = () => {
     if (!localStorage.getItem('authToken')) {
       navigation.push('/');
     }
-  }, []);
-
-  useLayoutEffect(() => {
     async function getInfo() {
       setLoading(true);
       try {
-        let response = await api.get<IAppInfoResponse>(`/getInfo/${name}`);
+        const response = await api.get<IAppInfoResponse>(`/info/${name}`);
         setBasicInfo({
-          name: response.data.appInfo.name,
-          github: response.data.appInfo.repository_link,
-          latestVersion: response.data.appInfo.latest_version,
+          display_name: response.data.display_name,
+          github: response.data.repo_url,
+          latestVersion: response.data.latest_version,
         });
-        console.log(response);
       } catch (e: any) {
         console.log(e);
         if (e?.response?.status >= 400 && e?.response?.status < 500) {
@@ -59,30 +56,29 @@ const AppInfo: React.FC = () => {
   const Upload = (file: File) => {
     try {
       var bodyFormData = new FormData();
-      bodyFormData.append('apk', file);
+      bodyFormData.append('file', file);
+      bodyFormData.append('version', selectedVersion);
+      bodyFormData.append('is_stable', (selectedType === 'stable').toString());
 
-      api.post(
-        `/upload/${name}/${selectedVersion.replace(
-          /\./g,
-          '_'
-        )}/${selectedType}`,
-        bodyFormData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: (event) => {
-            let progress: number = Math.round(
-              (event.loaded * 100) / event.total
-            );
+      api.post(`/upload/${name}`, bodyFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (event) => {
+          let progress: number = Math.round((event.loaded * 100) / event.total);
 
-            setMessage(`Fazendo upload... ${progress}% completo.`);
-            if (progress == 100) setMessage('Arquivo enviado');
-          },
-        }
-      );
+          setMessage(`Fazendo upload... ${progress}% completo.`);
+          if (progress === 100) {
+            setMessage('Arquivo enviado');
+            progress = 0;
+            setTimeout(() => setMessage(''), 2000);
+          }
+        },
+      });
     } catch (e: any) {
-      if (e?.response?.status >= 400 && e?.response?.status < 500) {
+      if (e.response?.data.detail === 'Unauthorized') {
         navigation.push('/');
         localStorage.clear();
+      } else {
+        setMessage(e.response?.data.detail);
       }
     }
   };
@@ -101,7 +97,7 @@ const AppInfo: React.FC = () => {
     <BackgroundImage>
       {!loading ? (
         <Card style={styles.card}>
-          <h1 style={styles.title}>{basicInfo.name}</h1>
+          <h1 style={styles.title}>{basicInfo.display_name}</h1>
           <h2 style={styles.label}>{message}</h2>
           <div style={styles.basicInfoContainer}>
             <span style={styles.label}>
@@ -123,8 +119,10 @@ const AppInfo: React.FC = () => {
               value={selectedVersion}
               style={{ width: '70%' }}
               onChange={(e) => {
-                console.log((e.target as HTMLInputElement).value);
-                if ((e.target as HTMLInputElement).value.match(/^[0-9\.]*$/g)) {
+                const newValue = (e.target as HTMLInputElement).value;
+                const semverRegex =
+                  /(?<Major>0|(?:[1-9]\d*))(?:\.(?<Minor>0|(?:[1-9]\d*))(?:\.(?<Patch>0|(?:[1-9]\d*)))?(?:\-(?<PreRelease>[0-9A-Z\.-]+))?(?:\+(?<Meta>[0-9A-Z\.-]+))?)?/g;
+                if (newValue.length === 0 || newValue.match(semverRegex)) {
                   setSelectedVersion((e.target as HTMLInputElement).value);
                 }
               }}

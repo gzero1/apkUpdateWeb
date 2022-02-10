@@ -19,18 +19,25 @@ const SignIn: React.FC = () => {
   const handleSubmit = async () => {
     try {
       console.log('posting');
-      let response = await api.post<ILoginData, AxiosResponse<ILoginResponse>>(
-        '/authorize',
-        { login: user, password }
-      );
+      const formdata = new FormData();
+      formdata.append('username', user);
+      formdata.append('password', password);
+
+      const response = await api.post<
+        ILoginData,
+        AxiosResponse<ILoginResponse>
+      >('auth/jwt/login', formdata);
       if (!response) {
         throw Error('Unknown Error');
       }
-      localStorage.setItem('authToken', response.data.token);
-      console.log('setToken', response.data.token);
+      localStorage.setItem('authToken', response.data.access_token);
       navigation.push('/dashboard');
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.message || error.message);
+      if (Array.isArray(error.response?.data.detail)) {
+        setErrorMessage(error.response?.data.detail[0].msg);
+      } else {
+        setErrorMessage(error.response?.data.detail);
+      }
     }
   };
   return (
@@ -62,17 +69,7 @@ const SignIn: React.FC = () => {
             }
           }}
         />
-        {/* <div style={styles.forgotPasswordContainer}>
-          <button
-            style={styles.forgotPassword}
-            onClick={(e) => {
-              e.preventDefault();
-              console.log('aa');
-            }}
-          >
-            Forgot my Password
-          </button>
-        </div> */}
+
         <button
           style={styles.submitButton}
           onClick={(e) => {
@@ -82,14 +79,6 @@ const SignIn: React.FC = () => {
         >
           <h3>Login</h3>
         </button>
-        {/* <button
-          onClick={(e) => {
-            e.preventDefault();
-            navigation.push('/signup');
-          }}
-        >
-          <span style={styles.signUp}>Create Account</span>
-        </button> */}
       </Card>
     </BackgroundImage>
   );

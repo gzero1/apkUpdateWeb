@@ -1,4 +1,4 @@
 export default interface ILoginResponse {
-  msg: string;
-  token: string;
+  access_token: string;
+  token_type: string;
 }

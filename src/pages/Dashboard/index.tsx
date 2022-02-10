@@ -1,14 +1,29 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import BackgroundImage from '../../components/BackgroundImage';
 import Card from '../../components/Card';
 import { useHistory as useNavigation } from 'react-router';
 import Button from '../../components/Button';
 import { VscTriangleRight } from 'react-icons/vsc';
+import { AxiosResponse } from 'axios';
+import api from '../../api';
+
+interface App {
+  name: string;
+  display_name: string;
+}
 
 const Dashboard: React.FC = () => {
   const navigation = useNavigation();
+  const [apps, setApps] = useState<App[]>([]);
 
   useLayoutEffect(() => {
+    (async () => {
+      const response = await api.get<null, AxiosResponse<App[]>>('/apps');
+      if (!response) {
+        throw Error('Unknown Error');
+      }
+      setApps(response.data);
+    })();
     if (!localStorage.getItem('authToken')) {
       navigation.push('/');
     }
@@ -18,30 +33,19 @@ const Dashboard: React.FC = () => {
     <BackgroundImage>
       <Card style={styles.card}>
         <h1 style={styles.title}>Choose an app</h1>
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            navigation.push('/dashboard/bla_bla');
-          }}
-        >
-          Blá Blá <VscTriangleRight />
-        </Button>
-        {/* <Button
-          onClick={(e) => {
-            e.preventDefault();
-            navigation.push('/dashboard/king');
-          }}
-        >
-          King
-        </Button> */}
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            navigation.push('/dashboard/maq');
-          }}
-        >
-          Maq <VscTriangleRight />
-        </Button>
+        {apps.map((app, index) => {
+          return (
+            <Button
+              key={app.name + index}
+              onClick={(e) => {
+                e.preventDefault();
+                navigation.push(`/dashboard/${app.name}`);
+              }}
+            >
+              {app.display_name} <VscTriangleRight />
+            </Button>
+          );
+        })}
       </Card>
     </BackgroundImage>
   );
