@@ -7,7 +7,8 @@ import Card from '../../components/Card';
 import Input from '../../components/Input';
 import ClipLoader from 'react-spinners/ClipLoader';
 import IAppInfoResponse from '../../@types/api/getInfo.response';
-import url from '../../api/url';
+import { AiOutlineSearch } from 'react-icons/ai';
+import IDownloadInfoResponse from '../../@types/api/downloadInfo.response';
 
 const AppInfo: React.FC = () => {
   const { name } = useParams<{ name: string }>();
@@ -16,11 +17,15 @@ const AppInfo: React.FC = () => {
     'stable'
   );
   const [message, setMessage] = useState<string>('');
+  const [IMEI, setIMEI] = useState<string>('');
+  const [IMEIMessage, setIMEIMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [basicInfo, setBasicInfo] = useState({
-    display_name: 'Loading...',
+    displayName: 'Loading...',
     github: 'Loading...',
     latestVersion: 'Loading...',
+    totalUsers: 0,
+    totalUpdatedUsers: 0,
   });
   const navigation = useNavigation();
   const inputFile = useRef<HTMLInputElement | null>(null);
@@ -34,9 +39,11 @@ const AppInfo: React.FC = () => {
       try {
         const response = await api.get<IAppInfoResponse>(`/info/${name}`);
         setBasicInfo({
-          display_name: response.data.display_name,
+          displayName: response.data.display_name,
           github: response.data.repo_url,
           latestVersion: response.data.latest_version,
+          totalUsers: response.data.total_downloads,
+          totalUpdatedUsers: response.data.total_updated,
         });
       } catch (e: any) {
         console.log(e);
@@ -53,7 +60,7 @@ const AppInfo: React.FC = () => {
     getInfo();
   }, []);
 
-  const Upload = (file: File) => {
+  const upload = (file: File) => {
     try {
       var bodyFormData = new FormData();
       bodyFormData.append('file', file);
@@ -83,13 +90,36 @@ const AppInfo: React.FC = () => {
     }
   };
 
-  const Download = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    if (selectedVersion.length > 0) {
-      window.open(
-        `${url}/download/${name}/${selectedVersion.replace(/\./g, '_')}`
+  // const Download = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  //   if (selectedVersion.length > 0) {
+  //     window.open(
+  //       `${url}/download/${name}/${selectedVersion.replace(/\./g, '_')}`
+  //     );
+  //   } else {
+  //     window.open(`${url}/download/${name}/latest`);
+  //   }
+  // };
+
+  const checkImei = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get<IDownloadInfoResponse>(
+        `/download_info/${name}`,
+        { params: { imei: IMEI } }
       );
-    } else {
-      window.open(`${url}/download/${name}/latest`);
+      console.log(response.data);
+      setIMEIMessage(
+        response.data.is_updated
+          ? 'Success: User HAS updated!'
+          : 'Warning: User HAS NOT updated!'
+      );
+    } catch (e: any) {
+      console.log(e);
+      if (e?.response?.data?.detail === 'IMEI não existe') {
+        setIMEIMessage('IMEI não existe');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,7 +127,7 @@ const AppInfo: React.FC = () => {
     <BackgroundImage>
       {!loading ? (
         <Card style={styles.card}>
-          <h1 style={styles.title}>{basicInfo.display_name}</h1>
+          <h1 style={styles.title}>{basicInfo.displayName}</h1>
           <h2 style={styles.label}>{message}</h2>
           <div style={styles.basicInfoContainer}>
             <span style={styles.label}>
@@ -111,6 +141,10 @@ const AppInfo: React.FC = () => {
               >
                 {basicInfo.github}
               </a>
+            </span>
+            <span style={styles.label}>
+              Total Usuários: {basicInfo.totalUpdatedUsers} / Total Atualizados:{' '}
+              {basicInfo.totalUpdatedUsers}
             </span>
           </div>
           <div style={styles.inputContainer}>
@@ -157,9 +191,6 @@ const AppInfo: React.FC = () => {
           </div>
 
           <div style={styles.versionContainer}>
-            <Button style={{ width: '45%' }} onClick={Download}>
-              Download
-            </Button>
             <Button
               style={{ width: '45%' }}
               onClick={() => {
@@ -176,11 +207,24 @@ const AppInfo: React.FC = () => {
             ref={inputFile}
             onChange={(e) => {
               if (e.target.files) {
-                Upload(e.target.files[0]);
+                upload(e.target.files[0]);
               }
             }}
             style={{ display: 'none' }}
           />
+
+          <div style={styles.imeicheck}>
+            <Input
+              placeholder="Check IMEI"
+              value={IMEI}
+              style={{ width: '60%' }}
+              onChange={(e) => setIMEI(e.target.value)}
+            />
+            <Button style={{ width: '20%' }} onClick={checkImei}>
+              <AiOutlineSearch size={25} />
+            </Button>
+          </div>
+          <span style={styles.label}>{IMEIMessage}</span>
         </Card>
       ) : (
         <Card style={{ ...styles.card, ...{ width: '20vw' } }}>
@@ -193,7 +237,7 @@ const AppInfo: React.FC = () => {
 
 const styles: StyleSheets = {
   card: {
-    height: '40vh',
+    height: '60vh',
     backgroundColor: 'rgba(27, 27, 27, 0.3)',
     boxShadow: 'inset 0 0 150px #86bef7',
     backdropFilter: 'blur(2rem) brightness(1.2) contrast(2rem) opacity(1)',
@@ -227,7 +271,7 @@ const styles: StyleSheets = {
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     width: '90%',
   },
   typeContainer: {
@@ -244,6 +288,14 @@ const styles: StyleSheets = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
+  },
+  imeicheck: {
+    width: '100%',
+    marginTop: '2rem',
+    flexDirection: 'row',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   checkbox: {
     backgroundColor: '#FFFFFF',

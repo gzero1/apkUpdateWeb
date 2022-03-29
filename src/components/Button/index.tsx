@@ -1,5 +1,4 @@
 import React from 'react';
-import { VscTriangleRight } from 'react-icons/vsc';
 
 const Button: React.FC<{
   onClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
@@ -17,7 +16,8 @@ const styles: StyleSheets = {
     height: '3rem',
     width: '11rem',
 
-    // marginTop: '1rem',
+    marginTop: '0.5rem',
+    marginBottom: '0.5rem',
 
     border: 0,
     borderStyle: 'solid',

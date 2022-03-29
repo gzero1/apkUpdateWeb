@@ -53,7 +53,7 @@ const Dashboard: React.FC = () => {
 
 const styles: StyleSheets = {
   card: {
-    height: '40vh',
+    // height: '40vh',
     backgroundColor: 'rgba(27, 27, 27, 0.3)',
     boxShadow: 'inset 0 0 150px #86bef7',
     backdropFilter: 'blur(2rem) brightness(1.2) contrast(2rem) opacity(1)',

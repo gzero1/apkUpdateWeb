@@ -4,4 +4,6 @@ export default interface IAppInfoResponse {
   name: string;
   display_name: string;
   latest_version: string;
+  total_downloads: number;
+  total_updated: number;
 }

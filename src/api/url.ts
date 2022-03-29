@@ -1,3 +1,3 @@
-const url = 'http://wssun.dyndns.ws:3432';
+const url = 'http://localhost:8080';
 
 export default url;
