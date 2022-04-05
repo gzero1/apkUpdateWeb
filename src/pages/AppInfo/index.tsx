@@ -254,23 +254,26 @@ const AppInfo: React.FC = () => {
               style={{ width: '60%' }}
               onChange={(e) => setApkFilter(e.target.value)}
             />
-            {apks
-              .filter((apk) => apk.version.includes(apkFilter))
-              .map((apk) => (
-                <div style={styles.versionListItem}>
-                  <span style={styles.label}>{apk.version}</span>
-                  <Switch
-                    onChange={async (checked) => {
-                      await api.post(`info/${name}`, {
-                        version: apk.version,
-                        is_stable: checked,
-                      });
-                      await updateInfo();
-                    }}
-                    checked={apk.is_stable}
-                  />
-                </div>
-              ))}
+            <div style={styles.versionList}>
+              {[...apks]
+                .reverse()
+                .filter((apk) => apk.version.includes(apkFilter))
+                .map((apk) => (
+                  <div style={styles.versionListItem}>
+                    <span style={styles.label}>{apk.version}</span>
+                    <Switch
+                      onChange={async (checked) => {
+                        await api.post(`info/${name}`, {
+                          version: apk.version,
+                          is_stable: checked,
+                        });
+                        await updateInfo();
+                      }}
+                      checked={apk.is_stable}
+                    />
+                  </div>
+                ))}
+            </div>
           </Card>
         </>
       ) : (
@@ -331,6 +334,11 @@ const styles: StyleSheets = {
     alignItems: 'center',
     justifyContent: 'center',
     width: '90%',
+  },
+  versionList: {
+    // flex: 1,
+    width: '100%',
+    overflowY: 'scroll',
   },
   typeContainer: {
     display: 'flex',
