@@ -1,3 +1,3 @@
-const url = 'https://wssun.dyndns.ws:3432';
+const url = 'https://malibu-ca.mine.nu:3432';
 
 export default url;
